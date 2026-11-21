@@ -1,18 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>雨夜便利店街角</title>
+<meta name="description" content="可以拖拽旋转、滚轮缩放的三渲二雨夜便利店微缩场景，全部由代码绘制（Three.js）。">
+<meta name="theme-color" content="#070912">
+<meta property="og:type" content="website">
+<meta property="og:title" content="雨夜便利店街角">
+<meta property="og:description" content="可以拖拽旋转、滚轮缩放的三渲二雨夜便利店微缩场景，全部由代码绘制（Three.js）。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b1020'/%3E%3Crect x='6' y='11' width='20' height='13' rx='1.5' fill='%231d2a4f'/%3E%3Crect x='6' y='9' width='20' height='3.5' rx='1' fill='%233ddc97'/%3E%3Crect x='9' y='14.5' width='14' height='7' rx='1' fill='%23ffd479'/%3E%3Cpath d='M9 4 7.5 8M15 3 13.5 7M21 4 19.5 8M26 3 24.5 7' stroke='%238fa6ff' stroke-width='1.4' stroke-linecap='round' opacity='.8'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;800&display=swap">
 <style>
-  /* Single dark look: a lit diorama floating in a night void. No UI. */
+  /* Single dark look: a lit diorama floating in a night void. No persistent UI:
+     the loader, the one-line hint and the WebGL message below all disappear once the scene runs. */
   :root { --void: #070912; color-scheme: dark; }
-  html, body { height: 100%; margin: 0; background: var(--void); overflow: hidden; }
+  html, body { height: 100%; margin: 0; background: var(--void); overflow: hidden; overscroll-behavior: none; }
+  body {
+    color: #aab3d6;
+    font: 14px/1.7 system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  }
   canvas {
     position: fixed; inset: 0; width: 100%; height: 100%;
     display: block; outline: none; touch-action: none;
     opacity: 0; transition: opacity 1.8s ease;
   }
   canvas.ready { opacity: 1; }
-  @media (prefers-reduced-motion: reduce) { canvas { transition: none; } }
+
+  /* Loader: shown until the first frame is drawn. */
+  #boot {
+    position: fixed; inset: 0; z-index: 2;
+    display: grid; place-content: center; justify-items: center; gap: 10px;
+    text-align: center; transition: opacity 0.8s ease;
+  }
+  #boot[hidden] { display: none; }
+  html.rk-ready #boot { opacity: 0; pointer-events: none; }
+  .boot__title { margin: 0; color: #cfd6f5; font-size: 18px; letter-spacing: 0.24em; text-indent: 0.24em; }
+  .boot__sub { margin: 0; color: #7f89b3; font-size: 12px; letter-spacing: 0.08em; }
+  .boot__bar {
+    width: 96px; height: 2px; margin-top: 6px; border-radius: 2px;
+    background: linear-gradient(90deg, transparent, #8fa6ff, transparent) 200% 0 / 200% 100%;
+    animation: boot-slide 1.4s linear infinite;
+  }
+  @keyframes boot-slide { to { background-position: -200% 0; } }
+
+  /* One-line control hint, shown briefly after the scene appears. */
+  .hint {
+    position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 2;
+    margin: 0; padding: 7px 16px; transform: translate(-50%, 8px);
+    border: 1px solid rgb(255 255 255 / 0.14); border-radius: 999px;
+    background: rgb(8 12 28 / 0.62); color: #c4cbec;
+    font-size: 12.5px; letter-spacing: 0.06em; white-space: nowrap;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .hint.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* Shown when WebGL2 is unavailable or the scene fails to start. */
+  #fallback, .fb {
+    position: fixed; inset: 0; z-index: 3; box-sizing: border-box; padding: 24px;
+    display: grid; place-content: center; gap: 8px; text-align: center;
+    background: var(--void);
+  }
+  #fallback[hidden] { display: none; }
+  #fallback p, .fb p { max-width: 28em; margin: 0; }
+  .fb__title { color: #cfd6f5; font-size: 17px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    canvas, #boot, .hint { transition: none; }
+    .boot__bar { animation: none; }
+  }
 </style>
 <script type="importmap">
 {
@@ -23,3 +82,52 @@
 }
 </script>
 <script type="module" src="./js/main.js"></script>
+</head>
+<body>
+<div id="boot" role="status" aria-live="polite">
+  <p class="boot__title">雨夜便利店街角</p>
+  <p class="boot__sub">正在把雨点一粒一粒画出来</p>
+  <span class="boot__bar" aria-hidden="true"></span>
+</div>
+<p id="hint" class="hint" aria-hidden="true"></p>
+<div id="fallback" role="alert" hidden>
+  <p class="fb__title">这个场景需要 WebGL2</p>
+  <p>当前浏览器或设备没能启动 WebGL2，场景无法显示。请换用较新的 Chrome、Edge、Firefox 或 Safari，并确认已开启硬件加速。</p>
+</div>
+<noscript><div class="fb"><p class="fb__title">需要启用 JavaScript</p><p>这个场景由脚本实时绘制，请启用 JavaScript 后刷新页面。</p></div></noscript>
+<script>
+  // Classic script on purpose: it still runs when the module graph fails (no WebGL2, offline CDN, ...).
+  (function () {
+    var root = document.documentElement;
+    var boot = document.getElementById('boot');
+    var fallback = document.getElementById('fallback');
+    var hint = document.getElementById('hint');
+
+    function fail() {
+      if (root.classList.contains('rk-ready')) return;
+      if (boot) boot.hidden = true;
+      if (fallback) fallback.hidden = false;
+    }
+    try { if (!document.createElement('canvas').getContext('webgl2')) fail(); } catch (e) { fail(); }
+    window.addEventListener('error', fail);
+    window.addEventListener('unhandledrejection', fail);
+
+    // main.js fires "rk-ready" after the first frame has been drawn.
+    window.addEventListener('rk-ready', function () {
+      root.classList.add('rk-ready');
+      if (fallback) fallback.hidden = true;
+      if (!hint) return;
+      var touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      hint.textContent = touch ? '单指拖动旋转 · 双指缩放、平移' : '左键拖动旋转 · 滚轮缩放 · 右键拖动平移';
+      var done = false;
+      function hide() { done = true; hint.classList.remove('show'); }
+      setTimeout(function () { if (!done) hint.classList.add('show'); }, 1600);
+      setTimeout(hide, 9000);
+      ['pointerdown', 'wheel', 'keydown'].forEach(function (type) {
+        window.addEventListener(type, hide, { once: true, passive: true });
+      });
+    });
+  })();
+</script>
+</body>
+</html>

@@ -21,8 +21,11 @@ export const scene = new THREE.Scene();
 
 export const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 260);
 camera.layers.enable(LAYER_FX);
+// The vertical field of view is fixed, so a portrait screen (a phone) only shows a narrow slice of the diorama.
+// Start further back there so the whole shop fits across the screen, and allow zooming out a bit more.
+const FIT = THREE.MathUtils.clamp(1 / ((window.innerWidth / window.innerHeight) * 1.35), 1, 1.75);
 {
-  const r = 43, polar = THREE.MathUtils.degToRad(57), az = THREE.MathUtils.degToRad(36);
+  const r = 43 * FIT, polar = THREE.MathUtils.degToRad(57), az = THREE.MathUtils.degToRad(36);
   camera.position.set(r * Math.sin(polar) * Math.sin(az), r * Math.cos(polar), r * Math.sin(polar) * Math.cos(az));
 }
 
@@ -34,7 +37,7 @@ controls.rotateSpeed = 0.6;
 controls.zoomSpeed = 0.8;
 controls.panSpeed = 0.6;
 controls.minDistance = 13;
-controls.maxDistance = 78;
+controls.maxDistance = 78 * FIT;
 controls.minPolarAngle = THREE.MathUtils.degToRad(8);
 controls.maxPolarAngle = THREE.MathUtils.degToRad(86);
 controls.screenSpacePanning = true;

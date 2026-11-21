@@ -66,7 +66,12 @@ async function init() {
     updateFx(signalColor());
     controls.update();
     render();
-    if (!shown) { shown = true; renderer.domElement.classList.add('ready'); }
+    if (!shown) {
+      shown = true;
+      renderer.domElement.classList.add('ready');
+      // index.html listens for this to hide the loader and show the control hint.
+      window.dispatchEvent(new Event('rk-ready'));
+    }
   });
 }
 init();
